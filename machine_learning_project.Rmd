@@ -1,0 +1,100 @@
+---
+title: "Coursera Practical Machine Learning Project"
+author: "Minqi Ow"
+date: "October 13, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Background
+
+With the prevalence of fitness devices such as Jawbone Up, Nike FuelBand and Fitbit, it is now possible to collect large amount of data about personal activity relatively expensively. A group of tech enthusiasts decided to use the data collected to try to quantify the quality of an exercise. In which case, the data collected are from barbell lifts done correctly and incorrectly in 5 different ways. More information on data collection can be found here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset)
+
+In this project, our goal is to predict the manner in which the test subject did the exercise. The "classe" variable will be used as an outcome of the various instrument data taken. 
+
+First load the necessary packages needed.
+```{r results='hide', message=FALSE, warning=FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE)
+library(caret)
+library(rpart)
+library(rattle)
+library(rpart.plot)
+library(randomForest)
+```
+
+## Data Processing
+
+First and foremost, the training and testing datasets are downloaded from the following links:
+1. [Training](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+2. [Testing](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+They are then loaded into specific variable for data processing
+
+```{r}
+train <- read.csv("pml-training.csv", na.strings = c("NA", ""))
+test <- read.csv("pml-testing.csv", na.strings = c("NA", ""))
+```
+
+Taking a quick look at the data, we know the first 7 columns are potential predictors of the classe - they are either too unique or offer no variation.
+Other than that, there are variable columns with large number of NAs and #DIV/0.  Hence, we will first work on eliminating these columns before we proceed to training the data.
+
+```{r}
+#Here we eliminate the first 7 columns
+train <- train[,-c(1:7)]
+#In the line below, we eliminate the columns with > 90% of NAs
+train <- train[, -which(colMeans(is.na(train))>0.7)]
+```
+
+Then we split the data into a training set and a cross validation set.
+
+```{r}
+#using the create partition function
+set.seed(1981)
+in_train <- createDataPartition(train$classe, p=3/4, list=FALSE)
+train_set <- train[in_train,]
+cross_set <- train[-in_train,]
+```
+
+## Machine Learning using Decision Trees
+
+First we train the model with the dataset we have
+```{r, warning = FALSE}
+moddt <- rpart(classe ~ ., data = train_set, method = "class")
+fancyRpartPlot(moddt)
+```
+
+Next we predict using the model we've created on the validation set.
+
+```{r}
+predictdt <- predict(moddt, cross_set, type = "class")
+cm_dt <- confusionMatrix(predictdt, cross_set$classe)
+cm_dt
+```
+
+The model only has an accuracy of 77.5%. Next we will train the data with a random forest model.
+
+## Machine Learning with Random Forest
+
+Once again we train the model with the dataset we have
+```{r, warning = FALSE}
+modrf <- randomForest(classe ~ ., data = train_set, ntree = 50)
+```
+
+Next we predict using the model we've created on the validation set.
+
+```{r}
+predictrf <- predict(modrf, cross_set, type = "class")
+cm_rf <- confusionMatrix(predictrf, cross_set$classe)
+cm_rf
+```
+
+The random forest model gave a surprising 99.6% accuracy. There might be a danger of overfitting here due to the high accuracy. In order to test that we will use the test set provided and for further questions in the assignment.
+
+```{r}
+predict_test <- predict(modrf, test, type = "class")
+predict_test
+```
