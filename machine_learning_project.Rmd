@@ -81,20 +81,23 @@ The model only has an accuracy of 77.5%. Next we will train the data with a rand
 
 Once again we train the model with the dataset we have
 ```{r, warning = FALSE}
-modrf <- randomForest(classe ~ ., data = train_set, ntree = 50)
+modrf <- train(classe ~ ., data = train_set, method = "rf",ntree = 50)
 ```
 
 Next we predict using the model we've created on the validation set.
 
 ```{r}
-predictrf <- predict(modrf, cross_set, type = "class")
+predictrf <- predict(modrf, cross_set)
 cm_rf <- confusionMatrix(predictrf, cross_set$classe)
 cm_rf
+varImpPlot(modrf$finalModel)
 ```
 
-The random forest model gave a surprising 99.6% accuracy. There might be a danger of overfitting here due to the high accuracy. In order to test that we will use the test set provided and for further questions in the assignment.
+The random forest model gave a surprising 99.6% accuracy. There might be a danger of overfitting here due to the high accuracy. A quick look at the important variable plot show some of the most important variable in determining the activity. 
+
+In order to test that we will use the test set provided and for further questions in the assignment.
 
 ```{r}
-predict_test <- predict(modrf, test, type = "class")
+predict_test <- predict(modrf, test)
 predict_test
 ```
